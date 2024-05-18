@@ -5,6 +5,7 @@ use actix_web::{
     HttpResponse, Responder,
 };
 use actix_web_httpauth::extractors::basic::BasicAuth;
+use actix_web::web;
 use argonautica::{Hasher, Verifier};
 use chrono::NaiveDateTime;
 use hmac::{Hmac, Mac};
@@ -12,7 +13,7 @@ use jwt::SignWithKey;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use sqlx::{self, FromRow};
-use actix_web::web;
+use serde_json::json;
 
 #[derive(Deserialize)]
 struct CreateUserBody {
@@ -34,19 +35,25 @@ struct AuthUser {
 }
 
 #[derive(Deserialize)]
-struct CreateArticleBody {
+struct CreateGraphBody {
     title: String,
     content: String,
 }
 
-#[derive(Serialize, FromRow)]
-struct Article {
+#[derive(Serialize, FromRow, Deserialize)]
+struct Graph {
     id: i32,
     title: String,
     content: String,
     published_by: i32,
     published_on: Option<NaiveDateTime>,
 }
+
+#[derive(Serialize, FromRow)]
+struct GraphId {
+    id: i32,
+}
+
 
 #[post("/user")]
 async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
@@ -123,7 +130,7 @@ async fn basic_auth(state: Data<AppState>, credentials: BasicAuth) -> impl Respo
                     if is_valid {
                         let claims = TokenClaims { id: user.id };
                         let token_str = claims.sign_with_key(&jwt_secret).unwrap();
-                        HttpResponse::Ok().json(token_str)
+                        HttpResponse::Ok().json(json!({ "auth_token": token_str }))
                     } else {
                         HttpResponse::Unauthorized().json("Incorrect username or password")
                     }
@@ -134,28 +141,28 @@ async fn basic_auth(state: Data<AppState>, credentials: BasicAuth) -> impl Respo
     }
 }
 
-#[post("/article")]
-async fn create_article(
+#[post("/graph")]
+async fn create_graph(
     state: Data<AppState>,
     req_user: Option<ReqData<TokenClaims>>,
-    body: Json<CreateArticleBody>,
+    body: Json<CreateGraphBody>,
 ) -> impl Responder {
     match req_user {
         Some(user) => {
-            let article: CreateArticleBody = body.into_inner();
+            let graph: CreateGraphBody = body.into_inner();
 
-            match sqlx::query_as::<_, Article>(
-                "INSERT INTO articles (title, content, published_by)
+            match sqlx::query_as::<_, Graph>(
+                "INSERT INTO graphs (title, content, published_by)
                 VALUES ($1, $2, $3)
                 RETURNING id, title, content, published_by, published_on",
             )
-            .bind(article.title)
-            .bind(article.content)
+            .bind(graph.title)
+            .bind(graph.content)
             .bind(user.id)
             .fetch_one(&state.db)
             .await
             {
-                Ok(articles) => HttpResponse::Ok().json(articles),
+                Ok(graphs) => HttpResponse::Ok().json(graphs),
                 Err(error) => HttpResponse::InternalServerError().json(format!("{:?}", error)),
             }
         }
@@ -164,27 +171,40 @@ async fn create_article(
 }
 
 
-#[get("/article/{id}")]
-async fn get_article_by_id(
-    state: Data<AppState>,
-    req_user: Option<ReqData<TokenClaims>>,
+
+#[get("/graph/{id}")]
+async fn get_graph_by_id(
+    state : Data<AppState>,
     id: web::Path<i32>,
 ) -> impl Responder {
-    match req_user {
-        Some(_) => {
-            match sqlx::query_as::<_, Article>(
-                "SELECT id, title, content, published_by, published_on
-                FROM articles
-                WHERE id = $1",
-            )
-            .bind(id.into_inner())
-            .fetch_one(&state.db)
-            .await
-            {
-                Ok(article) => HttpResponse::Ok().json(article),
-                Err(error) => HttpResponse::InternalServerError().json(format!("{:?}", error)),
-            }
-        }
-        _ => HttpResponse::Unauthorized().json("Unable to verify identity"),
+    match sqlx::query_as::<_, Graph>(
+        "SELECT id, title, content, published_by, published_on
+        FROM graphs
+        WHERE id = $1",
+    )
+    .bind(id.into_inner())
+    .fetch_one(&state.db)
+    .await
+    {
+        Ok(graph) => HttpResponse::Ok().json(graph),
+        Err(error) => HttpResponse::InternalServerError().json(format!("{:?}", error)),
+    }
+}
+
+
+#[get("/user/{id}/graphs")]
+async fn get_user_graphs(
+    state: Data<AppState>,
+    id: web::Path<i32>,
+) -> impl Responder {
+    match sqlx::query_as::<_, GraphId>(
+        "SELECT id FROM graphs WHERE published_by = $1",
+    )
+    .bind(id.into_inner())
+    .fetch_all(&state.db)
+    .await
+    {
+        Ok(graphs) => HttpResponse::Ok().json(graphs),
+        Err(error) => HttpResponse::InternalServerError().json(format!("{:?}", error)),
     }
 }

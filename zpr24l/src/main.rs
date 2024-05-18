@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
 mod services;
-use services::{basic_auth, create_article, create_user, get_article_by_id};
+use services::{basic_auth, create_graph, create_user, get_graph_by_id, get_user_graphs};
 
 pub struct AppState {
     db: Pool<Postgres>,
@@ -76,11 +76,12 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(AppState { db: pool.clone() }))
             .service(basic_auth)
             .service(create_user)
-            .service(get_article_by_id)
+            .service(get_graph_by_id)
+            .service(get_user_graphs)
             .service(
                 web::scope("")
                     .wrap(bearer_middleware)
-                    .service(create_article)
+                    .service(create_graph),
             )
             
     })
