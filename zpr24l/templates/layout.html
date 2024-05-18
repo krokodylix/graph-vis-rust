@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>graph vis</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            background-color: #1f1f1f;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .navbar ul {
+            list-style: none;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .navbar ul li {
+            display: inline;
+        }
+
+        .navbar ul li a {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            transition: background-color 0.3s;
+        }
+
+        .navbar ul li a:hover {
+            background-color: #333333;
+            border-radius: 5px;
+        }
+
+        .content {
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .content p {
+            font-size: 1.2rem;
+            line-height: 1.5;
+        }
+
+        .form-container {
+            margin-top: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .form-container input {
+            width: 80%;
+            max-width: 400px;
+            padding: 0.8rem;
+            margin: 0.5rem 0;
+            border: none;
+            border-radius: 5px;
+            background-color: #1f1f1f;
+            color: #ffffff;
+            font-size: 1rem;
+        }
+
+        .form-container input::placeholder {
+            color: #aaaaaa;
+        }
+
+        .form-container button {
+            width: 80%;
+            max-width: 400px;
+            padding: 0.8rem;
+            margin: 0.5rem 0;
+            border: none;
+            border-radius: 5px;
+            background-color: #3a3a3a;
+            color: #ffffff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .form-container button:hover {
+            background-color: #575757;
+        }
+
+        @media (max-width: 768px) {
+            .navbar ul {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .form-container input, .form-container button {
+                width: 90%;
+            }
+        }
+    </style>
+    
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">graph vis</div>
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/">About</a></li>
+            <li><a href="#">Services</a></li>
+            <script>
+                if (document.cookie.includes('token')) {
+                    document.write('<li><a href="/logout">Logout</a></li>');
+                }
+                else {
+                    document.write('<li><a href="/register">Register</a></li>');
+                    document.write('<li><a href="/login">Login</a></li>');
+                }
+            </script>
+        </ul>
+    </nav>
+    {% block content %}{% endblock %}
+
+</body>
+</html>

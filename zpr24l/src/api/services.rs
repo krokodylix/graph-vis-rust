@@ -55,7 +55,7 @@ struct GraphId {
 }
 
 
-#[post("/user")]
+#[post("/api/register")]
 async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
     let user: CreateUserBody = body.into_inner();
 
@@ -95,53 +95,49 @@ async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl 
     }
 }
 
-#[post("/auth")]
-async fn basic_auth(state: Data<AppState>, credentials: BasicAuth) -> impl Responder {
+
+
+#[post("/api/auth")]
+async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
     let jwt_secret: Hmac<Sha256> = Hmac::new_from_slice(
         std::env::var("JWT_SECRET")
             .expect("JWT_SECRET must be set!")
             .as_bytes(),
     )
     .unwrap();
-    let username = credentials.user_id();
-    let password = credentials.password();
+    let user: CreateUserBody = body.into_inner();
 
-    match password {
-        None => HttpResponse::Unauthorized().json("Must provide username and password"),
-        Some(pass) => {
-            match sqlx::query_as::<_, AuthUser>(
-                "SELECT id, username, password FROM users WHERE username = $1",
-            )
-            .bind(username.to_string())
-            .fetch_one(&state.db)
-            .await
-            {
-                Ok(user) => {
-                    let hash_secret =
-                        std::env::var("HASH_SECRET").expect("HASH_SECRET must be set!");
-                    let mut verifier = Verifier::default();
-                    let is_valid = verifier
-                        .with_hash(user.password)
-                        .with_password(pass)
-                        .with_secret_key(hash_secret)
-                        .verify()
-                        .unwrap();
+    match sqlx::query_as::<_, AuthUser>(
+        "SELECT id, username, password FROM users WHERE username = $1",
+    )
+    .bind(user.username.clone())
+    .fetch_one(&state.db)
+    .await
+    {
+        Ok(auth_user) => {
+            let hash_secret = std::env::var("HASH_SECRET")
+            .expect("HASH_SECRET must be set!");
+            let mut verifier = Verifier::default();
+            let is_valid = verifier
+                .with_hash(auth_user.password)
+                .with_password(user.password)
+                .with_secret_key(hash_secret)
+                .verify()
+                .unwrap();
 
-                    if is_valid {
-                        let claims = TokenClaims { id: user.id };
-                        let token_str = claims.sign_with_key(&jwt_secret).unwrap();
-                        HttpResponse::Ok().json(json!({ "auth_token": token_str }))
-                    } else {
-                        HttpResponse::Unauthorized().json("Incorrect username or password")
-                    }
-                }
-                Err(error) => HttpResponse::InternalServerError().json(format!("{:?}", error)),
+            if is_valid {
+                let claims = TokenClaims { id: auth_user.id };
+                let token_str = claims.sign_with_key(&jwt_secret).unwrap();
+                HttpResponse::Ok().json(json!({ "auth_token": token_str }))
+            } else {
+                HttpResponse::Unauthorized().json("Incorrect username or password")
             }
         }
+        Err(error) => HttpResponse::InternalServerError().json(json!({ "error": format!("{:?}", error) })),
     }
-}
+}   
 
-#[post("/graph")]
+#[post("/api/graph")]
 async fn create_graph(
     state: Data<AppState>,
     req_user: Option<ReqData<TokenClaims>>,
@@ -172,7 +168,7 @@ async fn create_graph(
 
 
 
-#[get("/graph/{id}")]
+#[get("/api/graph/{id}")]
 async fn get_graph_by_id(
     state : Data<AppState>,
     id: web::Path<i32>,
@@ -192,7 +188,7 @@ async fn get_graph_by_id(
 }
 
 
-#[get("/user/{id}/graphs")]
+#[get("/api/user/{id}/graphs")]
 async fn get_user_graphs(
     state: Data<AppState>,
     id: web::Path<i32>,

@@ -19,8 +19,16 @@ use jwt::VerifyWithKey;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
-mod services;
-use services::{basic_auth, create_graph, create_user, get_graph_by_id, get_user_graphs};
+mod api{
+    pub mod services;
+}
+use api::services::{basic_auth, create_user, create_graph, get_graph_by_id, get_user_graphs};
+
+mod front{
+    pub mod template;
+}
+use front::template::{root_dir, login, addgraph, register, logout};
+
 
 pub struct AppState {
     db: Pool<Postgres>,
@@ -78,6 +86,11 @@ async fn main() -> std::io::Result<()> {
             .service(create_user)
             .service(get_graph_by_id)
             .service(get_user_graphs)
+            .service(root_dir)
+            .service(login)
+            .service(addgraph)
+            .service(register)
+            .service(logout)
             .service(
                 web::scope("")
                     .wrap(bearer_middleware)

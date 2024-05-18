@@ -1,0 +1,33 @@
+{% extends 'layout.html' %}
+
+
+{% block content %}
+    <div class="content">
+        <h1>Login</h1>
+            <script>
+                function login() {
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    fetch('http://localhost:8080/api/auth', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            username: username,
+                            password: password
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        document.cookie = `token=${data.auth_token}`;
+                        window.location = '/addgraph';
+                    });
+                }
+            </script>
+        <div class="form-container">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="login()">Login</button>
+        </div>
+{% endblock %}

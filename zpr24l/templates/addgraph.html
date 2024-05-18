@@ -1,0 +1,32 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="content">
+    <h1>Add new graph</h1>
+        <script>
+            function addgraph() {
+                const title = document.getElementById('title').value;
+                const content = document.getElementById('content').value;
+                fetch('http://localhost:8080/api/graph', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${document.cookie.split('=')[1]}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        content: content
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Graph added successfully');
+                });
+            }
+        </script>
+    <div class="form-container">
+        <input type="text" id="title" placeholder="Title">
+        <input type="text" id="content" placeholder="Content">
+        <button onclick="addgraph()">Add Graph!</button>
+    </div>
+{% endblock %}    
