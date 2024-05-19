@@ -115,6 +115,18 @@
                 width: 90%;
             }
         }
+
+        a {
+            color: #bca9e1;
+            text-decoration: none;
+            transition: color 0.3s, border-bottom 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+
+        a:hover {
+            color: #ffffff;
+            border-bottom: 2px solid #aaaaaa; 
+        }
     </style>
     
 </head>
@@ -123,10 +135,10 @@
         <div class="logo">graph vis</div>
         <ul>
             <li><a href="/">Home</a></li>
-            <li><a href="/">About</a></li>
-            <li><a href="#">Services</a></li>
+            <li><a href="/usergraphs">View graphs</a></li>
             <script>
                 if (document.cookie.includes('token')) {
+                    document.write('<li><a href="/addgraph">Add graph</a></li>');
                     document.write('<li><a href="/logout">Logout</a></li>');
                 }
                 else {

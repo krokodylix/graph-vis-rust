@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<script>
+    searchUser = () => {
+        const user_id = document.getElementById('user_id').value;
+        fetch(`http://localhost:8080/api/user/${user_id}/graphs`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('user-graphs').innerHTML = '';
+                if (data.length === 0) {
+                    document.getElementById('user-graphs').innerHTML = '<p>No graphs found</p>';
+                    return;
+                }
+                else{
+                    document.getElementById('user-graphs').innerHTML = '<h2>User graphs:</h2>';
+                    data.forEach(graph => {
+                        const graphDiv = document.createElement('div');
+                        graphDiv.innerHTML = `<a href="/viewgraph?id=${graph.id}"><h2>${graph.title}</h2></a>`;
+                        document.getElementById('user-graphs').appendChild(graphDiv);
+                    });
+                }
+            });
+    }
+</script>
+<div class="content">
+    <h1>Search for user's graphs</h1>
+    <div class="form-container">
+        <input type="text" id="user_id" placeholder="User ID">
+        <button onclick="searchUser()">Search</button>
+    </div>
+    <div id="user-graphs"></div>
+</div>
+<div id="user-graphs"></div>
+
+{% endblock %}

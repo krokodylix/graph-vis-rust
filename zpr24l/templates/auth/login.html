@@ -20,8 +20,14 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        document.cookie = `token=${data.auth_token}`;
-                        window.location = '/addgraph';
+                        if (data.error) {
+                            alert(data.error);
+                        }
+                        else {
+                            document.cookie = `token=${data.auth_token}`;
+                            window.location = '/addgraph';
+                        }
+
                     });
                 }
             </script>

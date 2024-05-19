@@ -1,19 +1,18 @@
 use crate::{AppState, TokenClaims};
+use actix_web::web;
 use actix_web::{
     get, post,
     web::{Data, Json, ReqData},
     HttpResponse, Responder,
 };
-use actix_web_httpauth::extractors::basic::BasicAuth;
-use actix_web::web;
 use argonautica::{Hasher, Verifier};
 use chrono::NaiveDateTime;
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sha2::Sha256;
 use sqlx::{self, FromRow};
-use serde_json::json;
 
 #[derive(Deserialize)]
 struct CreateUserBody {
@@ -50,10 +49,10 @@ struct Graph {
 }
 
 #[derive(Serialize, FromRow)]
-struct GraphId {
+struct GraphSimple {
     id: i32,
+    title: String,
 }
-
 
 #[post("/api/register")]
 async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
@@ -67,12 +66,10 @@ async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl 
         .hash()
         .unwrap();
 
-    match sqlx::query_as::<_, UserNoPassword>(
-        "SELECT id, username FROM users WHERE username = $1",
-    )
-    .bind(user.username.clone())
-    .fetch_optional(&state.db)
-    .await
+    match sqlx::query_as::<_, UserNoPassword>("SELECT id, username FROM users WHERE username = $1")
+        .bind(user.username.clone())
+        .fetch_optional(&state.db)
+        .await
     {
         Ok(Some(_)) => {
             return HttpResponse::Conflict().json("User with that username already exists")
@@ -95,8 +92,6 @@ async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl 
     }
 }
 
-
-
 #[post("/api/auth")]
 async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
     let jwt_secret: Hmac<Sha256> = Hmac::new_from_slice(
@@ -115,8 +110,7 @@ async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl R
     .await
     {
         Ok(auth_user) => {
-            let hash_secret = std::env::var("HASH_SECRET")
-            .expect("HASH_SECRET must be set!");
+            let hash_secret = std::env::var("HASH_SECRET").expect("HASH_SECRET must be set!");
             let mut verifier = Verifier::default();
             let is_valid = verifier
                 .with_hash(auth_user.password)
@@ -130,12 +124,14 @@ async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl R
                 let token_str = claims.sign_with_key(&jwt_secret).unwrap();
                 HttpResponse::Ok().json(json!({ "auth_token": token_str }))
             } else {
-                HttpResponse::Unauthorized().json("Incorrect username or password")
+                HttpResponse::Unauthorized().json(json!({ "error": "Invalid credentials" }))
             }
         }
-        Err(error) => HttpResponse::InternalServerError().json(json!({ "error": format!("{:?}", error) })),
+        Err(error) => {
+            HttpResponse::InternalServerError().json(json!({ "error": format!("{:?}", error) }))
+        }
     }
-}   
+}
 
 #[post("/api/graph")]
 async fn create_graph(
@@ -166,13 +162,8 @@ async fn create_graph(
     }
 }
 
-
-
 #[get("/api/graph/{id}")]
-async fn get_graph_by_id(
-    state : Data<AppState>,
-    id: web::Path<i32>,
-) -> impl Responder {
+async fn get_graph_by_id(state: Data<AppState>, id: web::Path<i32>) -> impl Responder {
     match sqlx::query_as::<_, Graph>(
         "SELECT id, title, content, published_by, published_on
         FROM graphs
@@ -187,14 +178,12 @@ async fn get_graph_by_id(
     }
 }
 
-
 #[get("/api/user/{id}/graphs")]
-async fn get_user_graphs(
-    state: Data<AppState>,
-    id: web::Path<i32>,
-) -> impl Responder {
-    match sqlx::query_as::<_, GraphId>(
-        "SELECT id FROM graphs WHERE published_by = $1",
+async fn get_user_graphs(state: Data<AppState>, id: web::Path<i32>) -> impl Responder {
+    match sqlx::query_as::<_, GraphSimple>(
+        "SELECT id, title
+        FROM graphs
+        WHERE published_by = $1",
     )
     .bind(id.into_inner())
     .fetch_all(&state.db)

@@ -4,9 +4,13 @@
 <div class="content">
     <h1>Add new graph</h1>
         <script>
+            if (!document.cookie.includes('token')) {
+                window.location = '/login';
+            }
             function addgraph() {
-                const title = document.getElementById('title').value;
-                const content = document.getElementById('content').value;
+                // anti XSS :D
+                const title = document.getElementById('title').value.replace(/[\u00A0-\u9999<>\&]/g, i => '&#'+i.charCodeAt(0)+';');
+                const content = document.getElementById('content').value.replace(/[\u00A0-\u9999<>\&]/g, i => '&#'+i.charCodeAt(0)+';');
                 fetch('http://localhost:8080/api/graph', {
                     method: 'POST',
                     headers: {
@@ -20,6 +24,7 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    if (data === null) window.location = '/login';
                     alert('Graph added successfully');
                 });
             }
