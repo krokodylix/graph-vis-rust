@@ -47,3 +47,5 @@ Aby uruchomic lint'owanie nalezy w katalogu zpr24l wykonac komende:
 ```bash
 cargo check
 ```
+
+## testy
