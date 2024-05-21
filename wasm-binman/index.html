@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Graph Layout</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f0f0f0;
+        }
+        header {
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+            position: relative;
+        }
+        header a {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            text-decoration: none;
+            color: white;
+            font-size: 24px;
+            border: 2px solid white;
+            border-radius: 50%;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        header a:hover {
+            background-color: white;
+            color: #4CAF50;
+        }
+        #refresh-button {
+            margin: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #refresh-button:hover {
+            background-color: #45a049;
+        }
+        svg {
+            border: 1px solid black;
+            background-color: white;
+        }
+        .node {
+            cursor: pointer;
+        }
+        .fixed {
+            stroke: #ff0000;
+            stroke-width: 2px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="http://localhost:8080/usergraphs">&#8592;</a>
+        Graph Layout
+    </header>
+    <button id="refresh-button">Refresh Layout</button>
+    <svg width="1200" height="800"></svg>
+    <script type="module">
+        import init, { process_graph } from './pkg/graph_layout.js';
+        import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+        async function run(graphStr) {
+            await init();
+
+            const iterations = 1000;
+            const gravity = 0.1;
+            const scalingRatio = 10.0;
+
+            let processedGraph = process_graph(graphStr, iterations, gravity, scalingRatio);
+            let { nodes, edges } = createGraph(processedGraph);
+
+            const svg = d3.select("svg");
+            const width = +svg.attr("width");
+            const height = +svg.attr("height");
+
+            let defaultPositions = {};
+
+            function updateGraph() {
+                svg.selectAll("*").remove();
+
+                const simulation = d3.forceSimulation(nodes)
+                    .force("link", d3.forceLink(edges).id(d => d.id).distance(50))
+                    .force("charge", d3.forceManyBody().strength(-300))
+                    .force("center", d3.forceCenter(width / 2, height / 2))
+                    .force("x", d3.forceX(width / 2).strength(0.1))
+                    .force("y", d3.forceY(height / 2).strength(0.1))
+                    .on("end", () => {
+                        nodes.forEach(node => {
+                            defaultPositions[node.id] = { x: node.x, y: node.y };
+                        });
+                    });
+
+                const link = svg.append("g")
+                    .attr("stroke", "#999")
+                    .attr("stroke-opacity", 0.6)
+                    .selectAll("line")
+                    .data(edges)
+                    .enter().append("line")
+                    .attr("stroke-width", d => Math.sqrt(d.value));
+
+                const node = svg.append("g")
+                    .attr("stroke", "#fff")
+                    .attr("stroke-width", 1.5)
+                    .selectAll("circle")
+                    .data(nodes)
+                    .enter().append("circle")
+                    .attr("r", 5)
+                    .attr("fill", "red")
+                    .attr("class", "node")
+                    .call(drag(simulation));
+
+                node.append("title")
+                    .text(d => d.id);
+
+                simulation.on("tick", () => {
+                    link
+                        .attr("x1", d => d.source.x)
+                        .attr("y1", d => d.source.y)
+                        .attr("x2", d => d.target.x)
+                        .attr("y2", d => d.target.y);
+
+                    node
+                        .attr("cx", d => d.x)
+                        .attr("cy", d => d.y);
+                });
+
+                node.on("click", function(event, d) {
+                    d.fixed = !d.fixed;
+                    d3.select(this).classed("fixed", d.fixed);
+                    if (!d.fixed) {
+                        d.fx = null;
+                        d.fy = null;
+                        d3.select(this).transition()
+                            .duration(1000)
+                            .attr("cx", defaultPositions[d.id].x)
+                            .attr("cy", defaultPositions[d.id].y)
+                            .on("end", () => {
+                                d.x = defaultPositions[d.id].x;
+                                d.y = defaultPositions[d.id].y;
+                                d.fx = d.x;
+                                d.fy = d.y;
+                            });
+                    }
+                });
+            }
+
+            function createGraph(processedGraph) {
+                const edges = processedGraph.split(',').map(edge => {
+                    const [source, target] = edge.split('-').map(Number);
+                    return { source, target };
+                });
+
+                const nodes = Array.from(new Set(edges.flatMap(edge => [edge.source, edge.target]))).map(id => ({ id }));
+                
+                return { nodes, edges };
+            }
+
+            document.getElementById("refresh-button").addEventListener("click", () => {
+                processedGraph = process_graph(graphStr, iterations, gravity, scalingRatio);
+                ({ nodes, edges } = createGraph(processedGraph));
+                updateGraph();
+            });
+
+            updateGraph();
+        }
+
+        function drag(simulation) {
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            }
+
+            function dragged(event) {
+                event.subject.fx = event.subject.x = event.x;
+                event.subject.fy = event.subject.y = event.y;
+            }
+
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                if (!event.subject.fixed) {
+                    event.subject.fx = null;
+                    event.subject.fy = null;
+                }
+            }
+
+            return d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended);
+        }
+        const graph_id = new URLSearchParams(window.location.search).get('id');
+        fetch(`http://localhost:8080/api/graph/${graph_id}`)
+            .then(response => response.json())
+            .then(data => {
+                alert(data.content);
+                run(data.content);
+            });
+    </script>
+</body>
+</html>

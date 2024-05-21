@@ -18,6 +18,8 @@ use hmac::{Hmac, Mac};
 use jwt::VerifyWithKey;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use actix_cors::Cors;
+
 
 mod api {
     pub mod services;
@@ -77,10 +79,17 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Error building a connection pool");
 
+
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allow_any_origin()
+            .allow_any_method()
+            .allow_any_header();
+
         let bearer_middleware = HttpAuthentication::bearer(validator);
         App::new()
             .app_data(Data::new(AppState { db: pool.clone() }))
+            .wrap(cors)
             .service(basic_auth)
             .service(create_user)
             .service(get_graph_by_id)

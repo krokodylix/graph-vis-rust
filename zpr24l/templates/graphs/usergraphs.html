@@ -16,7 +16,7 @@
                     document.getElementById('user-graphs').innerHTML = '<h2>User graphs:</h2>';
                     data.forEach(graph => {
                         const graphDiv = document.createElement('div');
-                        graphDiv.innerHTML = `<a href="/viewgraph?id=${graph.id}"><h2>${graph.title}</h2></a>`;
+                        graphDiv.innerHTML = `<a href="http://localhost:8000?id=${graph.id}"><h2>${graph.title}</h2></a>`;
                         document.getElementById('user-graphs').appendChild(graphDiv);
                     });
                 }
