@@ -47,11 +47,16 @@
         #controls {
             margin: 20px;
             display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+        .control-group {
+            margin: 10px;
+            display: flex;
             flex-direction: column;
             align-items: center;
         }
         #refresh-button, #algorithm-select, #iterations-input, #gravity-input, #scaling-ratio-input {
-            margin: 10px;
             padding: 10px 20px;
             font-size: 16px;
             border: none;
@@ -81,6 +86,11 @@
             stroke: #ff0000;
             stroke-width: 2px;
         }
+        .grid line {
+            stroke: lightgrey;
+            stroke-opacity: 0.7;
+            shape-rendering: crispEdges;
+        }
     </style>
 </head>
 <body>
@@ -89,22 +99,45 @@
         Graph Layout
     </header>
     <div id="controls">
-        <select id="algorithm-select">
-            <option value="process_force_atlas2">Force Atlas 2</option>
-            <option value="process_fruchterman_reingold">Fruchterman-Reingold</option>
-            <option value="process_kamada_kawai">Kamada-Kawai</option>
-            <option value="process_circular">Circular</option>
-            <option value="process_random">Random</option>
-        </select>
-        <input id="iterations-input" type="number" placeholder="Iterations" value="1000">
-        <input id="gravity-input" type="number" placeholder="Gravity" step="0.1" value="0.1">
-        <input id="scaling-ratio-input" type="number" placeholder="Scaling Ratio" step="0.1" value="10.0">
+        <div class="control-group" id="algorithm-group">
+            <label for="algorithm-select">Algorithm</label>
+            <select id="algorithm-select">
+                <option value="process_force_atlas2">Force Atlas 2</option>
+                <option value="process_fruchterman_reingold">Fruchterman-Reingold</option>
+                <option value="process_circular">Circular</option>
+                <option value="process_random">Random</option>
+                <option value="process_stress_majorization">Stress Majorization</option>
+                <option value="process_multidimensional_scaling">Multidimensional Scaling</option>
+            </select>
+        </div>
+        <div class="control-group" id="iterations-group">
+            <label for="iterations-input">Iterations</label>
+            <input id="iterations-input" type="number" placeholder="Iterations" value="1000">
+        </div>
+        <div class="control-group" id="gravity-group">
+            <label for="gravity-input">Gravity</label>
+            <input id="gravity-input" type="number" placeholder="Gravity" step="0.1" value="0.1">
+        </div>
+        <div class="control-group" id="scaling-ratio-group">
+            <label for="scaling-ratio-input">Scaling Ratio</label>
+            <input id="scaling-ratio-input" type="number" placeholder="Scaling Ratio" step="0.1" value="10.0">
+        </div>
         <button id="refresh-button">Refresh Layout</button>
     </div>
-    <svg width="1400" height="900"></svg>
+    <svg width="2400" height="1600"></svg>
     <script type="module">
-        import init, { process_random, process_force_atlas2, process_circular, process_fruchterman_reingold, process_kamada_kawai } from './pkg/graph_layout.js';
+        import init, { process_random, process_force_atlas2, process_circular, process_fruchterman_reingold, process_stress_majorization, process_multidimensional_scaling } from './pkg/graph_layout.js';
         import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+        function updateControlVisibility(algorithm) {
+            const iterationsAlgorithms = ['process_force_atlas2', 'process_fruchterman_reingold', 'process_kamada_kawai', 'process_stress_majorization', 'process_multidimensional_scaling'];
+            const gravityAlgorithms = ['process_force_atlas2', 'process_fruchterman_reingold'];
+            const scalingRatioAlgorithms = ['process_force_atlas2'];
+
+            document.getElementById('iterations-group').style.display = iterationsAlgorithms.includes(algorithm) ? 'flex' : 'none';
+            document.getElementById('gravity-group').style.display = gravityAlgorithms.includes(algorithm) ? 'flex' : 'none';
+            document.getElementById('scaling-ratio-group').style.display = scalingRatioAlgorithms.includes(algorithm) ? 'flex' : 'none';
+        }
 
         async function run(graphStr, algorithm, iterations, gravity, scalingRatio) {
             await init();
@@ -124,27 +157,61 @@
                 case "process_fruchterman_reingold":
                     processedGraph = process_fruchterman_reingold(graphStr, iterations, gravity);
                     break;
-                case "process_kamada_kawai":
-                    processedGraph = process_kamada_kawai(graphStr, iterations);
+                case "process_stress_majorization":
+                    processedGraph = process_stress_majorization(graphStr, iterations);
+                    break;
+                case "process_multidimensional_scaling":
+                    processedGraph = process_multidimensional_scaling(graphStr, iterations);
                     break;
                 default:
                     throw new Error("Unknown algorithm");
             }
 
-            let { nodes, edges } = createGraph(processedGraph);
+            let { nodes, edges } = parseGraph(processedGraph);
 
+            scaleGraph(nodes);
             updateGraph(nodes, edges);
         }
 
-        function createGraph(processedGraph) {
-            const edges = processedGraph.split(',').map(edge => {
+        function parseGraph(graphStr) {
+            const parts = graphStr.split('edges:');
+            const nodesPart = parts[0].split('nodes:')[1].trim();
+            const edgesPart = parts[1].trim();
+
+            const nodes = nodesPart.split(';').filter(Boolean).map((node, index) => {
+                const [x, y] = node.split(',').map(Number);
+                return { id: index, x, y };
+            });
+
+            const edges = edgesPart.split(',').filter(Boolean).map(edge => {
                 const [source, target] = edge.split('-').map(Number);
                 return { source, target };
             });
 
-            const nodes = Array.from(new Set(edges.flatMap(edge => [edge.source, edge.target]))).map(id => ({ id }));
-            
             return { nodes, edges };
+        }
+
+        function scaleGraph(nodes) {
+            const svg = d3.select("svg");
+            const width = +svg.attr("width");
+            const height = +svg.attr("height");
+            const padding = 20;
+
+            const xExtent = d3.extent(nodes, d => d.x);
+            const yExtent = d3.extent(nodes, d => d.y);
+
+            const xScale = d3.scaleLinear()
+                .domain([xExtent[0], xExtent[1]])
+                .range([padding, width - padding]);
+
+            const yScale = d3.scaleLinear()
+                .domain([yExtent[0], yExtent[1]])
+                .range([padding, height - padding]);
+
+            nodes.forEach(node => {
+                node.x = xScale(node.x);
+                node.y = yScale(node.y);
+            });
         }
 
         function updateGraph(nodes, edges) {
@@ -152,30 +219,43 @@
             const width = +svg.attr("width");
             const height = +svg.attr("height");
 
-            let defaultPositions = {};
-
             svg.selectAll("*").remove();
 
-            const simulation = d3.forceSimulation(nodes)
-                .force("link", d3.forceLink(edges).id(d => d.id).distance(50))
-                .force("charge", d3.forceManyBody().strength(-300))
-                .force("center", d3.forceCenter(width / 2, height / 2))
-                .force("x", d3.forceX(width / 2).strength(0.1))
-                .force("y", d3.forceY(height / 2).strength(0.1))
-                .on("end", () => {
-                    nodes.forEach(node => {
-                        defaultPositions[node.id] = { x: node.x, y: node.y };
-                    });
-                });
+            // Draw grid
+            const gridSize = 50;
+            svg.append("g")
+                .attr("class", "grid")
+                .selectAll("line")
+                .data(d3.range(0, Math.max(width, height), gridSize))
+                .enter().append("line")
+                .attr("x1", d => d)
+                .attr("y1", 0)
+                .attr("x2", d => d)
+                .attr("y2", height);
+            svg.append("g")
+                .attr("class", "grid")
+                .selectAll("line")
+                .data(d3.range(0, Math.max(width, height), gridSize))
+                .enter().append("line")
+                .attr("x1", 0)
+                .attr("y1", d => d)
+                .attr("x2", width)
+                .attr("y2", d => d);
 
+            // Draw links
             const link = svg.append("g")
                 .attr("stroke", "#999")
                 .attr("stroke-opacity", 0.6)
                 .selectAll("line")
                 .data(edges)
                 .enter().append("line")
-                .attr("stroke-width", d => Math.sqrt(d.value));
+                .attr("stroke-width", 1)
+                .attr("x1", d => nodes[d.source].x)
+                .attr("y1", d => nodes[d.source].y)
+                .attr("x2", d => nodes[d.target].x)
+                .attr("y2", d => nodes[d.target].y);
 
+            // Draw nodes
             const node = svg.append("g")
                 .attr("stroke", "#fff")
                 .attr("stroke-width", 1.5)
@@ -184,23 +264,12 @@
                 .enter().append("circle")
                 .attr("r", 5)
                 .attr("fill", "red")
-                .attr("class", "node")
-                .call(drag(simulation));
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y)
+                .attr("class", "node");
 
             node.append("title")
                 .text(d => d.id);
-
-            simulation.on("tick", () => {
-                link
-                    .attr("x1", d => d.source.x)
-                    .attr("y1", d => d.source.y)
-                    .attr("x2", d => d.target.x)
-                    .attr("y2", d => d.target.y);
-
-                node
-                    .attr("cx", d => d.x)
-                    .attr("cy", d => d.y);
-            });
 
             node.on("click", function(event, d) {
                 d.fixed = !d.fixed;
@@ -208,61 +277,13 @@
                 if (!d.fixed) {
                     d.fx = null;
                     d.fy = null;
-                    d3.select(this).transition()
-                        .duration(1000)
-                        .attr("cx", defaultPositions[d.id].x)
-                        .attr("cy", defaultPositions[d.id].y)
-                        .on("end", () => {
-                            d.x = defaultPositions[d.id].x;
-                            d.y = defaultPositions[d.id].y;
-                            d.fx = d.x;
-                            d.fy = d.y;
-                        });
                 }
             });
         }
 
-        function drag(simulation) {
-            function dragstarted(event) {
-                if (!event.active) simulation.alphaTarget(0.3).restart();
-                event.subject.fx = event.subject.x;
-                event.subject.fy = event.subject.y;
-            }
-
-            function dragged(event) {
-                event.subject.fx = event.x;
-                event.subject.fy = event.y;
-            }
-
-            function dragended(event) {
-                if (!event.active) simulation.alphaTarget(0);
-                if (!event.subject.fixed) {
-                    event.subject.fx = null;
-                    event.subject.fy = null;
-                }
-            }
-
-            return d3.drag()
-                .on("start", dragstarted)
-                .on("drag", dragged)
-                .on("end", dragended);
-        }
-
         document.getElementById("algorithm-select").addEventListener("change", (event) => {
             const algorithm = event.target.value;
-            const iterationsInput = document.getElementById("iterations-input");
-            const gravityInput = document.getElementById("gravity-input");
-            const scalingRatioInput = document.getElementById("scaling-ratio-input");
-
-            iterationsInput.style.display = "block";
-            gravityInput.style.display = (algorithm === "process_force_atlas2" || algorithm === "process_fruchterman_reingold") ? "block" : "none";
-            scalingRatioInput.style.display = (algorithm === "process_force_atlas2") ? "block" : "none";
-
-            if (algorithm === "process_circular" || algorithm === "process_random") {
-                iterationsInput.style.display = "none";
-                gravityInput.style.display = "none";
-                scalingRatioInput.style.display = "none";
-            }
+            updateControlVisibility(algorithm);
         });
 
         const graph_id = new URLSearchParams(window.location.search).get('id');
@@ -273,14 +294,15 @@
                 const iterations = 1000;
                 const gravity = 0.1;
                 const scalingRatio = 10.0;
+                updateControlVisibility(algorithm);
                 run(data.content, algorithm, iterations, gravity, scalingRatio);
             });
-    
+
         document.getElementById("refresh-button").addEventListener("click", () => {
             const algorithm = document.getElementById("algorithm-select").value;
-            const iterations = parseInt(document.getElementById("iterations-input").value);
-            const gravity = parseFloat(document.getElementById("gravity-input").value);
-            const scalingRatio = parseFloat(document.getElementById("scaling-ratio-input").value);
+            const iterations = parseInt(document.getElementById("iterations-input").value) || 1000;
+            const gravity = parseFloat(document.getElementById("gravity-input").value) || 0.1;
+            const scalingRatio = parseFloat(document.getElementById("scaling-ratio-input").value) || 10.0;
             const graph_id = new URLSearchParams(window.location.search).get('id');
             fetch(`http://localhost:8080/api/graph/${graph_id}`)
                 .then(response => response.json())
@@ -288,6 +310,9 @@
                     run(data.content, algorithm, iterations, gravity, scalingRatio);
                 });
         });
+
+        // Initialize control visibility based on the default selected algorithm
+        updateControlVisibility(document.getElementById("algorithm-select").value);
     </script>
 </body>
 </html>

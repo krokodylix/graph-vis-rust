@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::Sha256;
 use sqlx::{self, FromRow};
+use rand::Rng;
 
 #[derive(Deserialize)]
 struct CreateUserBody {
@@ -52,6 +53,12 @@ struct Graph {
 struct GraphSimple {
     id: i32,
     title: String,
+}
+
+#[derive(Deserialize)]
+struct RandomGraphBody {
+    vertices: i32,
+    edges: i32,
 }
 
 #[post("/api/register")]
@@ -192,4 +199,24 @@ async fn get_user_graphs(state: Data<AppState>, id: web::Path<i32>) -> impl Resp
         Ok(graphs) => HttpResponse::Ok().json(graphs),
         Err(error) => HttpResponse::InternalServerError().json(format!("{:?}", error)),
     }
+}
+
+
+#[post("/api/randomgraph")]
+async fn random_graph(body: Json<RandomGraphBody>) -> impl Responder {
+    let random_graph: RandomGraphBody = body.into_inner();
+    let mut rng = rand::thread_rng();
+    let mut graph = String::new();
+    for _ in 0..random_graph.edges {
+        let v1 = rng.gen_range(1..random_graph.vertices + 1);
+        let v2 = loop {
+            let v2 = rng.gen_range(1..random_graph.vertices + 1);
+            if v2 != v1 {
+                break v2;
+            }
+        };
+        graph.push_str(&format!("{}-{},", v1, v2));
+    }
+    graph.pop();
+    HttpResponse::Ok().json(json!({ "graph": graph }))
 }

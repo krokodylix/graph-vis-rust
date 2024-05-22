@@ -24,7 +24,7 @@ use actix_cors::Cors;
 mod api {
     pub mod services;
 }
-use api::services::{basic_auth, create_graph, create_user, get_graph_by_id, get_user_graphs};
+use api::services::{basic_auth, create_graph, create_user, get_graph_by_id, get_user_graphs, random_graph};
 
 mod front {
     pub mod template;
@@ -101,6 +101,7 @@ async fn main() -> std::io::Result<()> {
             .service(logout)
             .service(viewgraph)
             .service(usergraphs)
+            .service(random_graph)
             .service(web::scope("").wrap(bearer_middleware).service(create_graph))
     })
     .bind(("127.0.0.1", 8080))?

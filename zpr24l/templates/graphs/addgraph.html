@@ -28,10 +28,47 @@
                     alert('Graph added successfully');
                 });
             }
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text);
+            }
+
+            function getrandomgraph() {
+                // post request to get random graph
+                const vertices = document.getElementById('vertices').value;
+                const edges = document.getElementById('edges').value;
+                
+                fetch('http://localhost:8080/api/randomgraph', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${document.cookie.split('=')[1]}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        vertices: parseInt(vertices),
+                        edges: parseInt(edges)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // display random graph
+                    document.getElementById('randomgraph').innerHTML = `<h2>${data.graph}</h2><button onclick="copyToClipboard('${data.graph}')">Copy</button>`;
+                });
+            }
+
+
         </script>
     <div class="form-container">
         <input type="text" id="title" placeholder="Title">
         <input type="text" id="content" placeholder="Content">
         <button onclick="addgraph()">Add Graph!</button>
+        <!-- generate random graph form, add vertices and edges fields-->
+        <!-- new line -->
+        <h2>Generate random graph</h2>
+        <input type="number" id="vertices" placeholder="Vertices">
+        <input type="number" id="edges" placeholder="Edges">
+        <button onclick="getrandomgraph()">Get random graph</button>
+        <!-- place holder for random graph; add click to copy -->
+        <div id="randomgraph"></div>
+
     </div>
 {% endblock %}    
