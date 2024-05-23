@@ -17,7 +17,7 @@ struct Node {
 }
 
 // Define Edge structure
-#[derive(Debug)]
+#[derive(Debug,Clone, PartialEq)]
 struct Edge {
     source: usize,
     target: usize,
@@ -398,4 +398,222 @@ pub fn process_multidimensional_scaling(graph_str: &str, iterations: usize) -> S
     let mut graph = from_string(graph_str);
     multidimensional_scaling(&mut graph, iterations);
     graph_to_string(&graph)
+}
+
+
+
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+
+    use wasm_bindgen_test::*;
+
+
+    #[wasm_bindgen_test]
+    fn pass() {
+        assert_eq!(1, 1);
+    }
+   
+
+    #[wasm_bindgen_test]
+    fn test_process_fruchterman_reingold() {
+        let graph_str = "0-1,1-2,3-4,2-3,2-4,5-9,1-5,2-6"; 
+        let iterations = 10;
+        let gravity = 1.0;
+        let result = process_fruchterman_reingold(graph_str, iterations, gravity);
+        let start = result.find("edges: ").unwrap_or(0);
+        let expected_result = "edges: ".to_owned() + graph_str + ","; 
+        assert_eq!(&result[start..], expected_result);
+    }
+
+    #[wasm_bindgen_test]
+    fn test_process_stress_majorization() {
+        let graph_str = "0-1,1-2,3-4,2-3,2-4,4-5,5-6,6-7,7-8,8-9,9-10,10-11,11-12,12-13,13-14,14-15";
+        let iterations = 20;
+
+        let result = process_stress_majorization(graph_str, iterations);
+
+        let start = result.find("edges: ").unwrap_or(0);
+        let expected_result = "edges: ".to_owned() + graph_str + ","; 
+        assert_eq!(&result[start..], expected_result);
+
+    }
+
+
+    #[wasm_bindgen_test]
+    fn test_process_random() {
+        let graph_str = "0-1,1-2,3-4,2-3,2-4,5-9,1-5,2-6,7-8,8-1,10-11,9-11"; 
+        let result = process_random(graph_str);
+        let start = result.find("edges: ").unwrap_or(0);
+        let expected_result = "edges: ".to_owned() + graph_str + ","; 
+        assert_eq!(&result[start..], expected_result);
+    }
+
+
+    #[wasm_bindgen_test]
+    fn test_new_graph() {
+        let num_nodes = 5;
+        let edges = vec![
+            Edge { source: 0, target: 1 },
+            Edge { source: 1, target: 2 },
+            Edge { source: 2, target: 3 },
+            Edge { source: 3, target: 4 },
+        ];
+
+        let graph = new_graph(num_nodes, edges.clone());
+
+        assert_eq!(graph.nodes.len(), num_nodes);
+        assert_eq!(graph.edges, edges);
+
+        for node in &graph.nodes {
+            assert!(node.position.x > 0.0 && node.position.x < 100.0);
+            assert!(node.position.y > 0.0 && node.position.y < 100.0);
+        }
+    }
+
+    #[wasm_bindgen_test]
+    fn test_process_circular() {
+        let graph_str = "0-1,1-2,2-3,3-4,4-0,1-5,5-6,6-7,6-8,6-9,6-10";
+    
+
+        let result = process_circular(graph_str);
+
+        // Parse the result and check the coordinates
+        let items: Vec<&str> = result.split(';').collect();
+        for item in items {
+            if item.starts_with("nodes:") {
+                let node_str = &item[6..];
+                let parts: Vec<&str> = node_str.split(',').collect();
+                assert_eq!(parts.len(), 2, "Unexpected parts length: {:?}, node_str: {}", parts, node_str);
+                let x: f64 = parts[0].trim().parse().unwrap();
+                assert!(x > 0.0 && x <= 100.0, "x coordinate is not in the expected range: {}", x);
+                let y: f64 = parts[1].trim().parse().unwrap();
+                assert!(y > 0.0 && y <= 100.0, "y coordinate is not in the expected range: {}", y);
+            }
+        }
+    }
+
+    #[wasm_bindgen_test]
+    fn test_process_force_atlas2() {
+        let graph_str = "0-1,1-2,2-3,3-4,4-0";
+        let iterations = 10;
+        let gravity = 1.0;
+        let scaling_ratio = 1.0;
+
+        let result = process_force_atlas2(graph_str, iterations, gravity, scaling_ratio);
+
+        // Parse the result and check the coordinates
+        let items: Vec<&str> = result.split(';').collect();
+        for item in items {
+            if item.starts_with("nodes:") {
+                let node_str = &item[6..];
+                let parts: Vec<&str> = node_str.split(',').collect();
+                assert_eq!(parts.len(), 2, "Unexpected parts length: {:?}, node_str: {}", parts, node_str);
+                println!("parts[0]: {}", parts[0]); // print the value of parts[0]
+                let x: f64 = parts[0].trim().parse().unwrap();
+                assert!(x > 0.0 && x <= 100.0, "x coordinate is not in the expected range: {}", x);
+                let y: f64 = parts[1].trim().parse().unwrap();
+                assert!(y > 0.0 && y <= 100.0, "y coordinate is not in the expected range: {}", y);
+            }
+        }
+    }
+
+    #[test]
+    fn test_graph_to_string() {
+        let nodes = vec![
+            Node { position: Point { x: 1.0, y: 2.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 3.0, y: 4.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 5.0, y: 6.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 7.0, y: 8.0 }, disp: Point { x: 0.0, y: 0.0 } },
+        ];
+        let edges = vec![
+            Edge { source: 0, target: 1 },
+            Edge { source: 2, target: 3 },
+        ];
+        let graph = Graph { nodes, edges };
+
+        let graph_str = graph_to_string(&graph);
+
+        assert_eq!(graph_str, "nodes: 1,2;3,4;5,6;7,8;edges: 0-1,2-3,");
+    }
+
+    #[wasm_bindgen_test]
+    fn test_multidimensional_scaling() {
+        let num_nodes = 5;
+        let edges = vec![
+            Edge { source: 0, target: 1 },
+            Edge { source: 1, target: 2 },
+            Edge { source: 2, target: 3 },
+            Edge { source: 3, target: 4 },
+            Edge { source: 4, target: 0 },
+        ];
+        let mut graph = new_graph(num_nodes, edges.clone());
+
+        multidimensional_scaling(&mut graph, 10);
+
+        // Check that the graph has the correct number of nodes and edges
+        assert_eq!(graph.nodes.len(), num_nodes);
+        assert_eq!(graph.edges, edges);
+
+        // Check that all nodes have a position with x and y between 0 and 100
+        for node in &graph.nodes {
+            assert!(node.position.x > 0.0 && node.position.x < 100.0);
+            assert!(node.position.y > 0.0 && node.position.y < 100.0);
+        }
+    }
+
+
+    #[test]
+    fn test_circular_layout() {
+        let nodes = vec![
+            Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
+        ];
+        let edges = vec![];
+        let mut graph = Graph { nodes, edges };
+
+        circular_layout(&mut graph);
+
+        let expected_positions = vec![
+            Point { x: 100.0, y: 50.0 },
+            Point { x: 50.0, y: 100.0 },
+            Point { x: 0.0, y: 50.0 },
+            Point { x: 50.0, y: 0.0 },
+        ];
+
+        for (node, expected_position) in graph.nodes.iter().zip(expected_positions.iter()) {
+            assert!((node.position.x - expected_position.x).abs() < 1e-6);
+            assert!((node.position.y - expected_position.y).abs() < 1e-6);
+        }
+    }
+
+
+  
+    
+    #[wasm_bindgen_test]
+    fn test_random_layout() {
+        // Create a graph with some nodes
+    let mut graph = Graph {
+        nodes: vec![
+            Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
+            Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
+        ],
+        edges: vec![],
+    };
+
+        // Apply the random layout
+        random_layout(&mut graph);
+
+        // Check that all nodes have a position with x and y between 0 and 100
+        for node in &graph.nodes {
+            assert!(node.position.x >= 0.0 && node.position.x <= 100.0);
+            assert!(node.position.y >= 0.0 && node.position.y <= 100.0);
+        }
+    }
+  
 }
