@@ -1,16 +1,34 @@
 # zpr24L
 
 ## uruchomienie aplikacji
-W katalogu database nalezy wykonac komende:
+aplikacje mozna uruchomic wykonujac skrypt build.sh
 ```bash
-docker-compose up -d
+./build.sh
 ```
-Nastepnie w katalogu zpr24l nalezy wykonac komendy:
+
+lub recznie wykonujac te czynnosci:
+
+### stworzenie bazy danych
 ```bash
+cd ./database
+sudo docker-compose up -d
+```
+
+### uruchomienie czesci aplikacji odpowiedzialnej za wyswietlnaie grafow
+```bash
+cd ../wasm-binman
+wasm-pack build --target web
+python3 -m http.server 8000 &
+```
+
+### uruchomienie glownej czesci aplikacji
+```bash
+cd ../zpr24l
 cargo build
 cargo run
 ```
 
+## usuniecie danych
 W celu wyczyszczenia danych aplikacji nalezy w katalogu glownym projektu wykonac polecenia
 ```bash
 sudo rm -rf ./database/data
@@ -21,7 +39,7 @@ docker-compose down
 W katalogu zpr24l
 ```bash
 cargo docs --no-deps #jesli nie chcemy generowac dokumentacji zaciaganych bibliotek
-cargos docs # jesli chcemy pelna dokumentacje
+cargo docs # jesli chcemy pelna dokumentacje
 ```
 Nastepnie dokumentacje mozna uruchomic w przegladarce przy uzyciu np python httpservera
 ```bash
