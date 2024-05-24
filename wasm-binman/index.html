@@ -108,6 +108,7 @@
                 <option value="process_random">Random</option>
                 <option value="process_stress_majorization">Stress Majorization</option>
                 <option value="process_multidimensional_scaling">Multidimensional Scaling</option>
+                <option value="uploaded_algorithm">Uploaded Algorithm</option>
             </select>
         </div>
         <div class="control-group" id="iterations-group">
@@ -122,28 +123,34 @@
             <label for="scaling-ratio-input">Scaling Ratio</label>
             <input id="scaling-ratio-input" type="number" placeholder="Scaling Ratio" step="0.1" value="10.0">
         </div>
+        <div class="control-group" id="upload-group">
+            <label for="upload-input">Upload Algorithm</label>
+            <input id="upload-input" type="file" accept=".js">
+        </div>
         <button id="refresh-button">Refresh Layout</button>
     </div>
     <svg width="2400" height="1600"></svg>
     <script type="module">
         import init, { process_random, process_force_atlas2, process_circular, process_fruchterman_reingold, process_stress_majorization, process_multidimensional_scaling } from './pkg/graph_layout.js';
         import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
-
+    
+        let uploadedAlgorithm = null;
+    
         function updateControlVisibility(algorithm) {
             const iterationsAlgorithms = ['process_force_atlas2', 'process_fruchterman_reingold', 'process_kamada_kawai', 'process_stress_majorization', 'process_multidimensional_scaling'];
             const gravityAlgorithms = ['process_force_atlas2', 'process_fruchterman_reingold'];
             const scalingRatioAlgorithms = ['process_force_atlas2'];
-
+    
             document.getElementById('iterations-group').style.display = iterationsAlgorithms.includes(algorithm) ? 'flex' : 'none';
             document.getElementById('gravity-group').style.display = gravityAlgorithms.includes(algorithm) ? 'flex' : 'none';
             document.getElementById('scaling-ratio-group').style.display = scalingRatioAlgorithms.includes(algorithm) ? 'flex' : 'none';
         }
-
+    
         async function run(graphStr, algorithm, iterations, gravity, scalingRatio) {
             await init();
-
+    
             let processedGraph;
-
+    
             switch (algorithm) {
                 case "process_random":
                     processedGraph = process_random(graphStr);
@@ -163,64 +170,75 @@
                 case "process_multidimensional_scaling":
                     processedGraph = process_multidimensional_scaling(graphStr, iterations);
                     break;
+                case "uploaded_algorithm":
+                    if (uploadedAlgorithm) {
+                        processedGraph = uploadedAlgorithm(graphStr); // Just pass graphStr
+                    } else {
+                        throw new Error("No uploaded algorithm available");
+                    }
+                    break;
                 default:
                     throw new Error("Unknown algorithm");
             }
 
             let { nodes, edges } = parseGraph(processedGraph);
-
+    
             scaleGraph(nodes);
             updateGraph(nodes, edges);
         }
-
+    
         function parseGraph(graphStr) {
             const parts = graphStr.split('edges:');
-            const nodesPart = parts[0].split('nodes:')[1].trim();
-            const edgesPart = parts[1].trim();
-
+            const nodesPart = parts[0].split('nodes:')[1]?.trim();
+            const edgesPart = parts[1]?.trim();
+    
+            if (!nodesPart || !edgesPart) {
+                throw new Error("Invalid graph format.");
+            }
+    
             const nodes = nodesPart.split(';').filter(Boolean).map((node, index) => {
                 const [x, y] = node.split(',').map(Number);
                 return { id: index, x, y };
             });
-
+    
             const edges = edgesPart.split(',').filter(Boolean).map(edge => {
                 const [source, target] = edge.split('-').map(Number);
                 return { source, target };
             });
-
+    
             return { nodes, edges };
         }
-
+    
         function scaleGraph(nodes) {
             const svg = d3.select("svg");
             const width = +svg.attr("width");
             const height = +svg.attr("height");
             const padding = 20;
-
+    
             const xExtent = d3.extent(nodes, d => d.x);
             const yExtent = d3.extent(nodes, d => d.y);
-
+    
             const xScale = d3.scaleLinear()
                 .domain([xExtent[0], xExtent[1]])
                 .range([padding, width - padding]);
-
+    
             const yScale = d3.scaleLinear()
                 .domain([yExtent[0], yExtent[1]])
                 .range([padding, height - padding]);
-
+    
             nodes.forEach(node => {
                 node.x = xScale(node.x);
                 node.y = yScale(node.y);
             });
         }
-
+    
         function updateGraph(nodes, edges) {
             const svg = d3.select("svg");
             const width = +svg.attr("width");
             const height = +svg.attr("height");
-
+    
             svg.selectAll("*").remove();
-
+    
             // Draw grid
             const gridSize = 50;
             svg.append("g")
@@ -241,7 +259,7 @@
                 .attr("y1", d => d)
                 .attr("x2", width)
                 .attr("y2", d => d);
-
+    
             // Draw links
             const link = svg.append("g")
                 .attr("stroke", "#999")
@@ -254,7 +272,7 @@
                 .attr("y1", d => nodes[d.source].y)
                 .attr("x2", d => nodes[d.target].x)
                 .attr("y2", d => nodes[d.target].y);
-
+    
             // Draw nodes
             const node = svg.append("g")
                 .attr("stroke", "#fff")
@@ -267,10 +285,10 @@
                 .attr("cx", d => d.x)
                 .attr("cy", d => d.y)
                 .attr("class", "node");
-
+    
             node.append("title")
                 .text(d => d.id);
-
+    
             node.on("click", function(event, d) {
                 d.fixed = !d.fixed;
                 d3.select(this).classed("fixed", d.fixed);
@@ -280,12 +298,43 @@
                 }
             });
         }
-
+    
+        function loadAlgorithmFromFile(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const scriptContent = event.target.result;
+                const script = document.createElement("script");
+                script.type = "module";
+                script.textContent = `
+                    import { default as customAlgorithm } from 'data:text/javascript;base64,${btoa(scriptContent)}';
+                    window.customAlgorithm = customAlgorithm;
+                `;
+                document.body.appendChild(script);
+    
+                setTimeout(() => {
+                    if (window.customAlgorithm) {
+                        uploadedAlgorithm = window.customAlgorithm;
+                        console.log("Custom algorithm loaded:", uploadedAlgorithm);
+                    } else {
+                        console.error("Failed to load custom algorithm.");
+                    }
+                }, 100);
+            };
+            reader.readAsText(file);
+        }
+    
+        document.getElementById("upload-input").addEventListener("change", (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                loadAlgorithmFromFile(file);
+            }
+        });
+    
         document.getElementById("algorithm-select").addEventListener("change", (event) => {
             const algorithm = event.target.value;
             updateControlVisibility(algorithm);
         });
-
+    
         const graph_id = new URLSearchParams(window.location.search).get('id');
         fetch(`http://localhost:8080/api/graph/${graph_id}`)
             .then(response => response.json())
@@ -297,7 +346,7 @@
                 updateControlVisibility(algorithm);
                 run(data.content, algorithm, iterations, gravity, scalingRatio);
             });
-
+    
         document.getElementById("refresh-button").addEventListener("click", () => {
             const algorithm = document.getElementById("algorithm-select").value;
             const iterations = parseInt(document.getElementById("iterations-input").value) || 1000;
@@ -310,9 +359,10 @@
                     run(data.content, algorithm, iterations, gravity, scalingRatio);
                 });
         });
-
+    
         // Initialize control visibility based on the default selected algorithm
         updateControlVisibility(document.getElementById("algorithm-select").value);
     </script>
+    
 </body>
 </html>
