@@ -29,7 +29,7 @@ use api::services::{basic_auth, create_graph, create_user, get_graph_by_id, get_
 mod front {
     pub mod template;
 }
-use front::template::{addgraph, login, logout, register, root_dir, usergraphs, viewgraph};
+use front::template::{addgraph, login, logout, register, root_dir, usergraphs};
 
 pub struct AppState {
     db: Pool<Postgres>,
@@ -99,7 +99,6 @@ async fn main() -> std::io::Result<()> {
             .service(addgraph)
             .service(register)
             .service(logout)
-            .service(viewgraph)
             .service(usergraphs)
             .service(random_graph)
             .service(web::scope("").wrap(bearer_middleware).service(create_graph))

@@ -45,13 +45,6 @@ async fn logout() -> impl Responder {
     HttpResponse::Ok().body(page)
 }
 
-#[get("/viewgraph")]
-async fn viewgraph() -> impl Responder {
-    let context = Context::new();
-    let page = TEMPLATES.render("graphs/viewgraph.html", &context).unwrap();
-    HttpResponse::Ok().body(page)
-}
-
 #[get("/usergraphs")]
 async fn usergraphs() -> impl Responder {
     let context = Context::new();
