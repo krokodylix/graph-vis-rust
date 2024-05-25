@@ -26,6 +26,8 @@
                 .then(data => {
                     if (data === null) window.location = '/login';
                     alert('Graph added successfully');
+                    const viewgraphlink = document.getElementById('viewgraphlink');
+                    viewgraphlink.innerHTML = `<a href="http://localhost:8000?id=${data.id}" target="_blank"><button>View graph!</button></a>`;
                 });
             }
             function copyToClipboard(text) {
@@ -64,6 +66,7 @@
         <input type="number" id="edges" placeholder="Edges">
         <button onclick="getrandomgraph()">Get random graph</button>
         <div id="randomgraph"></div>
+        <dib id="viewgraphlink"></div>
 
     </div>
 {% endblock %}    

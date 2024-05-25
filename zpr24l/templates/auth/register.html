@@ -5,6 +5,7 @@
     <div class="content">
         <h1>Register</h1>
             <script>
+                const alreadyRegistered = "User with that username already exists"
                 function register() {
                     const username = document.getElementById('username').value;
                     const password = document.getElementById('password').value;
@@ -20,10 +21,14 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        console.log(data);
-                        alert('Registered successfully');
-                        window.location = '/login';
-   
+                        if (data === alreadyRegistered) {
+                            alert('User with that username already exists');
+                            return;
+                        }
+                        else{
+                            alert('Registered successfully');
+                            window.location = '/login';
+                        }
                     })
                     .catch(err => {
                         alert('Error registering');

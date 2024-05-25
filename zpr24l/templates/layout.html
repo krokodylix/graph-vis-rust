@@ -138,6 +138,8 @@
             <li><a href="/usergraphs">View graphs</a></li>
             <script>
                 if (document.cookie.includes('token')) {
+                    const userId = JSON.parse(atob(document.cookie.split('.')[1])).id;
+                    document.write(`<li><a href="javascript:alert(${userId})">View my id</a></li>`);
                     document.write('<li><a href="/addgraph">Add graph</a></li>');
                     document.write('<li><a href="/logout">Logout</a></li>');
                 }
