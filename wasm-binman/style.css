@@ -1,0 +1,87 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    background-color: #1f1f1f;
+    color: #ecf0f1;
+    height: 100vh;
+}
+header {
+    width: 100%;
+    background-color: #3a3a3a;
+    color: white;
+    padding: 20px 0;
+    text-align: center;
+    position: relative;
+}
+header a {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    text-decoration: none;
+    color: white;
+    font-size: 32px;
+    border: 2px solid white;
+    border-radius: 50%;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #3a3a3a;
+}
+header a:hover {
+    background-color: white;
+    color: #3a3a3a;
+}
+#controls {
+    margin: 20px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.control-group {
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+#refresh-button, #algorithm-select, #iterations-input, #gravity-input, #scaling-ratio-input {
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+}
+#refresh-button {
+    background-color: #1abc9c;
+    color: white;
+}
+#refresh-button:hover {
+    background-color: #16a085;
+}
+#algorithm-select, #iterations-input, #gravity-input, #scaling-ratio-input {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    border: 1px solid #ccc;
+}
+svg {
+    border: 1px solid black;
+    background-color: white;
+}
+.node {
+    cursor: pointer;
+}
+.fixed {
+    stroke: #ff0000;
+    stroke-width: 2px;
+}
+.grid line {
+    stroke: lightgrey;
+    stroke-opacity: 0.7;
+    shape-rendering: crispEdges;
+}
