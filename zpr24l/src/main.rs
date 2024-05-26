@@ -4,7 +4,9 @@ use actix_web::{
     web::{self, Data},
     App, HttpMessage, HttpServer,
 };
+
 use dotenv::dotenv;
+
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 use actix_web_httpauth::{
@@ -14,12 +16,12 @@ use actix_web_httpauth::{
     },
     middleware::HttpAuthentication,
 };
+
 use hmac::{Hmac, Mac};
 use jwt::VerifyWithKey;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use actix_cors::Cors;
-
 
 mod api {
     pub mod services;
@@ -31,15 +33,23 @@ mod front {
 }
 use front::template::{addgraph, login, logout, register, root_dir, usergraphs};
 
+
+// CODE IN THIS FILE IS RESPONSIBLE FOR SETTING UP AND RUNNING THE ACTIX WEB SERVER
+
+
+// Struct to hold the application state, including the database connection pool.
 pub struct AppState {
     db: Pool<Postgres>,
 }
 
+// Struct to represent the claims extracted from a JWT token.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TokenClaims {
     id: i32,
 }
 
+// Function to validate the JWT token provided in the request.
+// If valid, the token claims are added to the request extensions for further use.
 async fn validator(
     req: ServiceRequest,
     credentials: BearerAuth,
@@ -69,9 +79,13 @@ async fn validator(
     }
 }
 
+// Main function to set up and run the Actix web server.
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // Load environment variables from .env file.
     dotenv().ok();
+
+    // Retrieve the database URL from the environment variables and create a connection pool.
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let pool = PgPoolOptions::new()
         .max_connections(5)
@@ -79,14 +93,18 @@ async fn main() -> std::io::Result<()> {
         .await
         .expect("Error building a connection pool");
 
-
+    // Configure and start the HTTP server.
     HttpServer::new(move || {
+        // Configure CORS to allow any origin, method, and header.
         let cors = Cors::default()
             .allow_any_origin()
             .allow_any_method()
             .allow_any_header();
 
+        // Configure the bearer authentication middleware.
         let bearer_middleware = HttpAuthentication::bearer(validator);
+
+        // Set up the Actix web application with the necessary services and middleware.
         App::new()
             .app_data(Data::new(AppState { db: pool.clone() }))
             .wrap(cors)

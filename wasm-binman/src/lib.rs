@@ -2,6 +2,12 @@ use wasm_bindgen::prelude::*;
 use js_sys::Math;
 use std::f64::consts::PI;
 
+
+// CODE IN THIS FILE IS RESPONSIBLE FOR IMPLEMENTING THE GRAPH LAYOUT ALGORITHMS
+// CODE IS COMPILED TO WEBASSEMBLY AND GETS EXECUTED IN THE BROWSER
+// TESTS ARE ADDED AT THE END OF THE FILE
+
+
 // Define Point structure
 #[derive(Clone, Copy, Debug)]
 struct Point {
@@ -64,7 +70,14 @@ fn from_string(graph_str: &str) -> Graph {
     new_graph(num_nodes, edges)
 }
 
-// Implement Force-Atlas2 algorithm
+/*
+Force-Atlas2 is a popular force-directed layout algorithm used in network visualization,
+particularly within the Gephi software.
+It operates by simulating a physical system where nodes repel each other,
+similar to charged particles, while edges act like springs that attract connected nodes.
+This dual-force dynamic helps in spreading out the nodes in a visually appealing and interpretable manner,
+reducing clutter and enhancing the clarity of the network structure.
+*/
 fn force_atlas2(graph: &mut Graph, iterations: usize, gravity: f64, scaling_ratio: f64) -> &Graph {
     for _ in 0..iterations {
         // Reset displacement
@@ -129,7 +142,10 @@ fn force_atlas2(graph: &mut Graph, iterations: usize, gravity: f64, scaling_rati
     graph
 }
 
-// Implement Circular Layout
+/*
+A circular layout algorithm is a technique used in graph drawing where nodes are positioned on a circle,
+distributing them evenly to optimize the visual representation of the graph.
+*/
 fn circular_layout(graph: &mut Graph) -> &Graph {
     let num_nodes = graph.nodes.len();
     let radius = 50.0;
@@ -143,7 +159,10 @@ fn circular_layout(graph: &mut Graph) -> &Graph {
     graph
 }
 
-// Implement Random Layout
+/*
+Random layout is a simple graph layout algorithm that randomly positions nodes within a given area.
+Implemented for comparison purposes and as a starting point for more advanced layout algorithms.
+*/
 fn random_layout(graph: &mut Graph) -> &Graph {
     for node in &mut graph.nodes {
         node.position = Point {
@@ -154,7 +173,13 @@ fn random_layout(graph: &mut Graph) -> &Graph {
     graph
 }
 
-// Implement Fruchterman-Reingold Algorithm
+/*
+The Fruchterman-Reingold algorithm is a force-directed layout algorithm used in network visualization.
+It treats nodes as repelling particles and edges as attractive springs,
+aiming to position nodes in such a way that all forces are balanced.
+This results in an aesthetically pleasing layout where connected nodes are drawn closer together,
+while unrelated nodes are spaced further apart.
+*/
 fn fruchterman_reingold(graph: &mut Graph, iterations: usize, area: f64, gravity: f64) -> &Graph {
     let k = (area / graph.nodes.len() as f64).sqrt();
 
@@ -221,7 +246,12 @@ fn fruchterman_reingold(graph: &mut Graph, iterations: usize, area: f64, gravity
     graph
 }
 
-// Implement Stress Majorization Algorithm
+/*
+The Stress Majorization Algorithm is a prominent layout algorithm used in graph drawing and network visualization.
+It aims to position the nodes of a graph in such a way that
+the geometric distances between nodes in the drawing are as close as possible
+to their theoretical distances in the graph.
+*/
 fn stress_majorization(graph: &mut Graph, iterations: usize) -> &Graph {
     let mut distances = vec![vec![f64::INFINITY; graph.nodes.len()]; graph.nodes.len()];
 
@@ -282,7 +312,14 @@ fn stress_majorization(graph: &mut Graph, iterations: usize) -> &Graph {
     graph
 }
 
-// Implement Multidimensional Scaling (MDS) Algorithm
+/*
+Multidimensional Scaling is a statistical technique used for visualizing the similarity or dissimilarity of data points in a lower-dimensional space.
+The primary goal of MDS is to place each object in a low-dimensional space (usually 2 or 3 in our case 2)
+such that the distances between points in this space reflect the given similarities or dissimilarities as accurately as possible.
+MDS is often used in exploratory data analysis and data visualization to uncover hidden patterns or relationships in high-dimensional datasets.
+he algorithm works by minimizing a stress function, which measures the disparity between the distances in the high-dimensional
+space and the lower-dimensional representation, ensuring that the resulting layout preserves the original structure of the data.
+*/
 fn multidimensional_scaling(graph: &mut Graph, iterations: usize) -> &Graph {
     let mut distances = vec![vec![f64::INFINITY; graph.nodes.len()]; graph.nodes.len()];
 

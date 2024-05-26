@@ -1,8 +1,11 @@
+// Importing necessary functions from the graph layout package and the D3.js library
 import init, { process_random, process_force_atlas2, process_circular, process_fruchterman_reingold, process_stress_majorization, process_multidimensional_scaling } from './pkg/graph_layout.js';
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
+// Variable to hold the uploaded algorithm, if any
 let uploadedAlgorithm = null;
 
+// Function to update the visibility of control elements based on the selected algorithm
 function updateControlVisibility(algorithm) {
     const iterationsAlgorithms = ['process_force_atlas2', 'process_fruchterman_reingold', 'process_kamada_kawai', 'process_stress_majorization', 'process_multidimensional_scaling'];
     const gravityAlgorithms = ['process_force_atlas2', 'process_fruchterman_reingold'];
@@ -13,11 +16,13 @@ function updateControlVisibility(algorithm) {
     document.getElementById('scaling-ratio-group').style.display = scalingRatioAlgorithms.includes(algorithm) ? 'flex' : 'none';
 }
 
+// Function to run the selected graph processing algorithm with the provided parameters
 async function run(graphStr, algorithm, iterations, gravity, scalingRatio) {
     await init();
 
     let processedGraph;
 
+    // Switch statement to handle different algorithms
     switch (algorithm) {
         case "process_random":
             processedGraph = process_random(graphStr);
@@ -50,10 +55,12 @@ async function run(graphStr, algorithm, iterations, gravity, scalingRatio) {
 
     let { nodes, edges } = parseGraph(processedGraph);
 
+    // Scaling and updating the graph with processed data
     scaleGraph(nodes);
     updateGraph(nodes, edges);
 }
 
+// Function to parse the graph string into nodes and edges
 function parseGraph(graphStr) {
     const parts = graphStr.split('edges:');
     const nodesPart = parts[0].split('nodes:')[1]?.trim();
@@ -76,6 +83,7 @@ function parseGraph(graphStr) {
     return { nodes, edges };
 }
 
+// Function to scale the graph nodes to fit within the SVG container
 function scaleGraph(nodes) {
     const svg = d3.select("svg");
     const width = +svg.attr("width");
@@ -99,6 +107,7 @@ function scaleGraph(nodes) {
     });
 }
 
+// Function to update the SVG with the graph nodes and edges
 function updateGraph(nodes, edges) {
     const svg = d3.select("svg");
     const width = +svg.attr("width");
@@ -106,7 +115,7 @@ function updateGraph(nodes, edges) {
 
     svg.selectAll("*").remove();
 
-    // Draw grid
+    // Draw grid lines
     const gridSize = 50;
     svg.append("g")
         .attr("class", "grid")
@@ -127,7 +136,7 @@ function updateGraph(nodes, edges) {
         .attr("x2", width)
         .attr("y2", d => d);
 
-    // Draw links
+    // Draw edges
     const link = svg.append("g")
         .attr("stroke", "#999")
         .attr("stroke-opacity", 0.6)
@@ -153,9 +162,11 @@ function updateGraph(nodes, edges) {
         .attr("cy", d => d.y)
         .attr("class", "node");
 
+    // Add title to each node
     node.append("title")
         .text(d => d.id);
 
+    // Handle node click event for fixing/unfixing nodes
     node.on("click", function(event, d) {
         d.fixed = !d.fixed;
         d3.select(this).classed("fixed", d.fixed);
@@ -166,6 +177,7 @@ function updateGraph(nodes, edges) {
     });
 }
 
+// Function to load a custom algorithm from a file
 function loadAlgorithmFromFile(file) {
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -178,6 +190,7 @@ function loadAlgorithmFromFile(file) {
         `;
         document.body.appendChild(script);
 
+        // Check if the custom algorithm was successfully loaded
         setTimeout(() => {
             if (window.customAlgorithm) {
                 uploadedAlgorithm = window.customAlgorithm;
@@ -190,6 +203,7 @@ function loadAlgorithmFromFile(file) {
     reader.readAsText(file);
 }
 
+// Event listener for file upload input
 document.getElementById("upload-input").addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -197,11 +211,13 @@ document.getElementById("upload-input").addEventListener("change", (event) => {
     }
 });
 
+// Event listener for algorithm selection change
 document.getElementById("algorithm-select").addEventListener("change", (event) => {
     const algorithm = event.target.value;
     updateControlVisibility(algorithm);
 });
 
+// Fetch and render the initial graph from the server
 const graph_id = new URLSearchParams(window.location.search).get('id');
 fetch(`http://localhost:8080/api/graph/${graph_id}`)
     .then(response => response.json())
@@ -214,6 +230,7 @@ fetch(`http://localhost:8080/api/graph/${graph_id}`)
         run(data.content, algorithm, iterations, gravity, scalingRatio);
     });
 
+// Event listener for the refresh button to re-run the graph processing with updated parameters
 document.getElementById("refresh-button").addEventListener("click", () => {
     const algorithm = document.getElementById("algorithm-select").value;
     const iterations = parseInt(document.getElementById("iterations-input").value) || 1000;

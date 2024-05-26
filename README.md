@@ -36,17 +36,17 @@ docker-compose down
 ```
 
 ## budowanie dokumentacji
-W katalogu zpr24l
+W katalogu zpr24l lub wasm-binman
 ```bash
-cargo docs --no-deps #jesli nie chcemy generowac dokumentacji zaciaganych bibliotek
-cargo docs # jesli chcemy pelna dokumentacje
+cargo doc --no-deps #jesli nie chcemy generowac dokumentacji zaciaganych bibliotek
+cargo doc # jesli chcemy pelna dokumentacje
 ```
-Nastepnie dokumentacje mozna uruchomic w przegladarce przy uzyciu np python httpservera
+Nastepnie dokumentacja mozna obejrzec w przegladarce uruchamiajac w katalogu ./zpr24l/target/doc/ lub ./wasm-binman/target/doc serwer http korzystajac z komendy
 ```bash
-python3 -m http.server
+python3 -m http.server 12345
 ```
 Dokumentacja bedzie dostepna pod adresem:
-[http://localhost:8000/zpr24l/](http://localhost:8000/zpr24l/)
+[http://localhost:12345/zpr24l/](http://localhost:12345/zpr24l/)
 
 ## formater kodu
 Uzyty zostal formater rustfmt.
@@ -54,7 +54,7 @@ instalacja:
 ```bash
 sudo apt install rustfmt
 ```
-Nastepnie katalogu zpr24l projektu:
+Nastepnie w katalogu zpr24l projektu:
 ```bash
 rustfmt --edition 2021 src/*.rs
 ```
@@ -67,3 +67,9 @@ cargo check
 ```
 
 ## testy
+Testy uruchamiane se podczas buildu projektu przy uzyciu komendy:
+```bash
+wasm-pack test --node
+cargo test
+```
+Testy mozna uruchomic rowniez manualnie.

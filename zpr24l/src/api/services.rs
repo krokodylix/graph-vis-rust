@@ -1,32 +1,47 @@
 use crate::{AppState, TokenClaims};
+
 use actix_web::web;
 use actix_web::{
     get, post,
     web::{Data, Json, ReqData},
     HttpResponse, Responder,
 };
+
 use argonautica::{Hasher, Verifier};
+
 use chrono::NaiveDateTime;
+
 use hmac::{Hmac, Mac};
 use jwt::SignWithKey;
+
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+
 use sha2::Sha256;
+
 use sqlx::{self, FromRow};
+
 use rand::Rng;
 
+
+// CODE IN THIS FILE IS RESPONSIBLE FOR HANDLING THE API ROUTES AND THEIR CORRESPONDING FUNCTIONS
+
+
+// Define a struct for the body of the create user request.
 #[derive(Deserialize)]
 struct CreateUserBody {
     username: String,
     password: String,
 }
 
+// Define a struct for a user without a password.
 #[derive(Serialize, FromRow)]
 struct UserNoPassword {
     id: i32,
     username: String,
 }
 
+// Define a struct for an authenticated user.
 #[derive(Serialize, FromRow)]
 struct AuthUser {
     id: i32,
@@ -34,12 +49,14 @@ struct AuthUser {
     password: String,
 }
 
+// Define a struct for the body of the create graph request.
 #[derive(Deserialize)]
 struct CreateGraphBody {
     title: String,
     content: String,
 }
 
+// Define a struct for a graph.
 #[derive(Serialize, FromRow, Deserialize)]
 struct Graph {
     id: i32,
@@ -49,22 +66,26 @@ struct Graph {
     published_on: Option<NaiveDateTime>,
 }
 
+// Define a struct for a simplified graph representation.
 #[derive(Serialize, FromRow)]
 struct GraphSimple {
     id: i32,
     title: String,
 }
 
+// Define a struct for the body of the random graph request.
 #[derive(Deserialize)]
 struct RandomGraphBody {
     vertices: i32,
     edges: i32,
 }
 
+// Endpoint to register a new user.
 #[post("/api/register")]
 async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
     let user: CreateUserBody = body.into_inner();
 
+    // Hash the user's password.
     let hash_secret = std::env::var("HASH_SECRET").expect("HASH_SECRET must be set!");
     let mut hasher = Hasher::default();
     let hash = hasher
@@ -73,6 +94,7 @@ async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl 
         .hash()
         .unwrap();
 
+    // Check if a user with the same username already exists.
     match sqlx::query_as::<_, UserNoPassword>("SELECT id, username FROM users WHERE username = $1")
         .bind(user.username.clone())
         .fetch_optional(&state.db)
@@ -84,6 +106,8 @@ async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl 
         Err(error) => return HttpResponse::InternalServerError().json(format!("{:?}", error)),
         _ => (),
     }
+
+    // Insert the new user into the database.
     match sqlx::query_as::<_, UserNoPassword>(
         "INSERT INTO users (username, password)
         VALUES ($1, $2)
@@ -99,8 +123,10 @@ async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl 
     }
 }
 
+// Endpoint to authenticate a user and return a JWT token.
 #[post("/api/auth")]
 async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
+    // Retrieve the JWT secret key.
     let jwt_secret: Hmac<Sha256> = Hmac::new_from_slice(
         std::env::var("JWT_SECRET")
             .expect("JWT_SECRET must be set!")
@@ -109,6 +135,7 @@ async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl R
     .unwrap();
     let user: CreateUserBody = body.into_inner();
 
+    // Fetch the user's details from the database.
     match sqlx::query_as::<_, AuthUser>(
         "SELECT id, username, password FROM users WHERE username = $1",
     )
@@ -117,6 +144,7 @@ async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl R
     .await
     {
         Ok(auth_user) => {
+            // Verify the user's password.
             let hash_secret = std::env::var("HASH_SECRET").expect("HASH_SECRET must be set!");
             let mut verifier = Verifier::default();
             let is_valid = verifier
@@ -127,6 +155,7 @@ async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl R
                 .unwrap();
 
             if is_valid {
+                // Create JWT token if credentials are valid.
                 let claims = TokenClaims { id: auth_user.id };
                 let token_str = claims.sign_with_key(&jwt_secret).unwrap();
                 HttpResponse::Ok().json(json!({ "auth_token": token_str }))
@@ -140,6 +169,7 @@ async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl R
     }
 }
 
+// Endpoint to create a new graph.
 #[post("/api/graph")]
 async fn create_graph(
     state: Data<AppState>,
@@ -150,6 +180,7 @@ async fn create_graph(
         Some(user) => {
             let graph: CreateGraphBody = body.into_inner();
 
+            // Insert the new graph into the database.
             match sqlx::query_as::<_, Graph>(
                 "INSERT INTO graphs (title, content, published_by)
                 VALUES ($1, $2, $3)
@@ -169,8 +200,10 @@ async fn create_graph(
     }
 }
 
+// Endpoint to get a graph by its ID.
 #[get("/api/graph/{id}")]
 async fn get_graph_by_id(state: Data<AppState>, id: web::Path<i32>) -> impl Responder {
+    // Fetch the graph from the database.
     match sqlx::query_as::<_, Graph>(
         "SELECT id, title, content, published_by, published_on
         FROM graphs
@@ -185,8 +218,10 @@ async fn get_graph_by_id(state: Data<AppState>, id: web::Path<i32>) -> impl Resp
     }
 }
 
+// Endpoint to get all graphs created by a user.
 #[get("/api/user/{id}/graphs")]
 async fn get_user_graphs(state: Data<AppState>, id: web::Path<i32>) -> impl Responder {
+    // Fetch the user's graphs from the database.
     match sqlx::query_as::<_, GraphSimple>(
         "SELECT id, title
         FROM graphs
@@ -201,12 +236,14 @@ async fn get_user_graphs(state: Data<AppState>, id: web::Path<i32>) -> impl Resp
     }
 }
 
-
+// Endpoint to generate a random graph.
 #[post("/api/randomgraph")]
 async fn random_graph(body: Json<RandomGraphBody>) -> impl Responder {
     let random_graph: RandomGraphBody = body.into_inner();
     let mut rng = rand::thread_rng();
     let mut graph = String::new();
+    
+    // Generate random edges for the graph.
     for _ in 0..random_graph.edges {
         let v1 = rng.gen_range(1..random_graph.vertices + 1);
         let v2 = loop {
@@ -218,5 +255,7 @@ async fn random_graph(body: Json<RandomGraphBody>) -> impl Responder {
         graph.push_str(&format!("{}-{},", v1, v2));
     }
     graph.pop();
+    
+    // Return the generated graph as a response.
     HttpResponse::Ok().json(json!({ "graph": graph }))
 }

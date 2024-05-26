@@ -3,6 +3,11 @@ use actix_web::{get, HttpResponse, Responder};
 use lazy_static::lazy_static;
 use tera::{Context, Tera};
 
+
+// CODE IN THIS FILE IS RESPONSIBLE FOR RENDERING HTML TEMPLATES USING THE TERA TEMPLATE ENGINE
+
+
+// Define a static Tera instance using lazy_static to compile templates once and reuse them.
 lazy_static! {
     pub static ref TEMPLATES: Tera = {
         let source = "templates/**/*";
@@ -10,6 +15,9 @@ lazy_static! {
         tera
     };
 }
+
+// Bind template rendering to specific routes using the GET http method
+
 #[get("/")]
 async fn root_dir() -> impl Responder {
     let context = Context::new();
