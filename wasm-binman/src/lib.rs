@@ -454,7 +454,7 @@ pub mod tests {
    
 
     #[wasm_bindgen_test]
-    fn test_process_fruchterman_reingold() {
+    fn fruchterman_reingold_check_if_output_is_correct() {
         let graph_str = "0-1,1-2,3-4,2-3,2-4,5-9,1-5,2-6"; 
         let iterations = 10;
         let gravity = 1.0;
@@ -465,7 +465,7 @@ pub mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn test_process_stress_majorization() {
+    fn process_stress_majorization_check_if_output_is_correct() {
         let graph_str = "0-1,1-2,3-4,2-3,2-4,4-5,5-6,6-7,7-8,8-9,9-10,10-11,11-12,12-13,13-14,14-15";
         let iterations = 20;
 
@@ -479,7 +479,7 @@ pub mod tests {
 
 
     #[wasm_bindgen_test]
-    fn test_process_random() {
+    fn random_check_if_output_is_correct() {
         let graph_str = "0-1,1-2,3-4,2-3,2-4,5-9,1-5,2-6,7-8,8-1,10-11,9-11"; 
         let result = process_random(graph_str);
         let start = result.find("edges: ").unwrap_or(0);
@@ -489,7 +489,7 @@ pub mod tests {
 
 
     #[wasm_bindgen_test]
-    fn test_new_graph() {
+    fn new_graph_check_if_positions_of_added_graph_are_correct() {
         let num_nodes = 5;
         let edges = vec![
             Edge { source: 0, target: 1 },
@@ -510,7 +510,7 @@ pub mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn test_process_circular() {
+    fn process_circular_check_if_coordinates_are_correct() {
         let graph_str = "0-1,1-2,2-3,3-4,4-0,1-5,5-6,6-7,6-8,6-9,6-10";
     
 
@@ -532,7 +532,7 @@ pub mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn test_process_force_atlas2() {
+    fn force_atlas2_check_if_coordinates_are_correct() {
         let graph_str = "0-1,1-2,2-3,3-4,4-0";
         let iterations = 10;
         let gravity = 1.0;
@@ -557,7 +557,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_graph_to_string() {
+    fn graph_to_string_check_if_parsed_correctly() {
         let nodes = vec![
             Node { position: Point { x: 1.0, y: 2.0 }, disp: Point { x: 0.0, y: 0.0 } },
             Node { position: Point { x: 3.0, y: 4.0 }, disp: Point { x: 0.0, y: 0.0 } },
@@ -576,7 +576,7 @@ pub mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn test_multidimensional_scaling() {
+    fn multidimensional_scaling_check_for_correct_nodes_positions() {
         let num_nodes = 5;
         let edges = vec![
             Edge { source: 0, target: 1 },
@@ -602,7 +602,7 @@ pub mod tests {
 
 
     #[test]
-    fn test_circular_layout() {
+    fn circular_layout_check_if_coordinates_are_correct() {
         let nodes = vec![
             Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
             Node { position: Point { x: 0.0, y: 0.0 }, disp: Point { x: 0.0, y: 0.0 } },
@@ -631,7 +631,7 @@ pub mod tests {
   
     
     #[wasm_bindgen_test]
-    fn test_random_layout() {
+    fn random_layout_check_if_coordinates_are_in_range() {
         // Create a graph with some nodes
     let mut graph = Graph {
         nodes: vec![

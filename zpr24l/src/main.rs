@@ -125,3 +125,40 @@ async fn main() -> std::io::Result<()> {
     .run()
     .await
 }
+
+
+
+#[cfg(test)]
+mod tests {
+    use actix_web::{http::header::ContentType, test, App, http::StatusCode};
+
+    use super::*;
+
+    #[actix_web::test]
+    async fn check_if_root_dir_server_response_200_for_get_request() {
+        let app = test::init_service(App::new().service(root_dir)).await;
+        let req = test::TestRequest::default()
+            .insert_header(ContentType::plaintext())
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(),StatusCode::OK);
+    }
+
+    #[actix_web::test]
+    async fn check_if_root_dir_server_response_404_for_post_request() {
+        let app = test::init_service(App::new().service(root_dir)).await;
+        let req = test::TestRequest::post().uri("/").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(),StatusCode::NOT_FOUND);
+    }   
+
+    #[actix_web::test]
+    async fn check_if_login_page_loads_witch_200_response() {
+        let app = test::init_service(App::new().service(login)).await;
+        let req = test::TestRequest::get().uri("/login").to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(),StatusCode::OK);
+    }  
+
+
+}
