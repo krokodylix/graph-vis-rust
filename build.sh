@@ -14,5 +14,6 @@ python3 -m http.server 8000 &
 
 # uruchomienie glownej czesci aplikacji
 cd ../zpr24l
+cargo test
 cargo build
 cargo run
