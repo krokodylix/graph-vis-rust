@@ -83,6 +83,12 @@ struct RandomGraphBody {
 // Endpoint to register a new user.
 #[post("/api/register")]
 async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
+
+    // check if the username or password is empty.
+    if body.username.is_empty() || body.password.is_empty() {
+        return HttpResponse::BadRequest().json(json!({ "error": "Username or password is empty" }));
+    }
+
     let user: CreateUserBody = body.into_inner();
 
     // Hash the user's password.
@@ -126,6 +132,12 @@ async fn create_user(state: Data<AppState>, body: Json<CreateUserBody>) -> impl 
 // Endpoint to authenticate a user and return a JWT token.
 #[post("/api/auth")]
 async fn basic_auth(state: Data<AppState>, body: Json<CreateUserBody>) -> impl Responder {
+
+    // Check if the username or password is empty.
+    if body.username.is_empty() || body.password.is_empty() {
+        return HttpResponse::BadRequest().json(json!({ "error": "Username or password is empty" }));
+    }
+    
     // Retrieve the JWT secret key.
     let jwt_secret: Hmac<Sha256> = Hmac::new_from_slice(
         std::env::var("JWT_SECRET")
@@ -255,7 +267,7 @@ async fn random_graph(body: Json<RandomGraphBody>) -> impl Responder {
         graph.push_str(&format!("{}-{},", v1, v2));
     }
     graph.pop();
-    
+
     // Return the generated graph as a response.
     HttpResponse::Ok().json(json!({ "graph": graph }))
 }

@@ -2,7 +2,7 @@
 
 # stworzenie bazy danych
 cd ./database
-sudo docker-compose up -d
+docker-compose up -d
 
 
 # uruchomienie czesci aplikacji odpowiedzialnej za wyswietlnaie grafow

@@ -31,7 +31,7 @@ cargo run
 ## usuniecie danych
 W celu wyczyszczenia danych aplikacji nalezy w katalogu glownym projektu wykonac polecenia
 ```bash
-sudo rm -rf ./database/data
+rm -rf ./database/data
 docker-compose down
 ```
 
